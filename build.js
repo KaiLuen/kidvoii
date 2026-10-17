@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /* 產生各語系的靜態頁面：node build.js
  *
- *   src/page.html + src/i18n.js  →  index.html（繁中）、en/、es/、ko/ 的 index.html、sitemap.xml
+ *   src/page.html + src/i18n.js  →  index.html（英文）、zh/、es/、ko/ 的 index.html、sitemap.xml
  *
  * 每個語系一個網址，Google 才會分別收錄；頁面之間用 hreflang 互相標註。
+ * 語言選單、hreflang、sitemap 的順序跟 src/i18n.js 裡的語系順序一樣（英文排第一）。
  * 產生出來的檔案不要手改，改 src/ 之後重跑這支。
  */
 const fs = require("fs");
@@ -12,6 +13,9 @@ const path = require("path");
 const SITE = "https://kailuen.github.io/kidvoii/";
 const DEFAULT_LANG = "en"; // x-default：搜尋者的語言不在這四種裡時給英文版
 const ROOT = __dirname;
+
+// 搬走的舊網址 → 現在的語系。英文版原本在 /en/，2026-10 改放根目錄
+const MOVED = { "en/": "en" };
 
 const I18N = require("./src/i18n.js");
 const TEMPLATE = fs.readFileSync(path.join(ROOT, "src/page.html"), "utf8");
@@ -136,11 +140,36 @@ ${urls}
 `;
 }
 
-for (const lang of LANGS) {
-  const out = path.join(ROOT, I18N[lang].path, "index.html");
-  fs.mkdirSync(path.dirname(out), { recursive: true });
-  fs.writeFileSync(out, build(lang));
-  console.log("寫入", path.relative(ROOT, out));
+// GitHub Pages 不能設 301，用 canonical + 0 秒 meta refresh，Google 會當成轉址；不放進 sitemap
+// 跳轉用相對路徑，本機預覽才不會跳到正式站；canonical 一定要絕對網址
+function movedPage(oldPath, lang) {
+  const depth = oldPath.split("/").filter(Boolean).length;
+  const rel = escapeHtml("../".repeat(depth) + I18N[lang].path || "./");
+  const canonical = escapeHtml(pageUrl(lang));
+  return `<!DOCTYPE html>
+<html lang="${I18N[lang].htmlLang}">
+<head>
+<meta charset="utf-8">
+<title>${escapeHtml(I18N[lang]["meta.title"])}</title>
+<link rel="canonical" href="${canonical}">
+<meta http-equiv="refresh" content="0; url=${rel}">
+<script>location.replace("${rel}" + location.hash);</script>
+</head>
+<body><p><a href="${rel}">${canonical}</a></p></body>
+</html>
+`;
 }
-fs.writeFileSync(path.join(ROOT, "sitemap.xml"), sitemap());
-console.log("寫入 sitemap.xml");
+
+const writeFile = (rel, content) => {
+  const out = path.join(ROOT, rel);
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  fs.writeFileSync(out, content);
+  console.log("寫入", rel);
+};
+
+for (const lang of LANGS) writeFile(path.join(I18N[lang].path, "index.html"), build(lang));
+for (const [oldPath, lang] of Object.entries(MOVED)) {
+  if (LANGS.some((l) => I18N[l].path === oldPath)) throw new Error(`${oldPath} 現在是語系頁，不能當轉址`);
+  writeFile(path.join(oldPath, "index.html"), movedPage(oldPath, lang));
+}
+writeFile("sitemap.xml", sitemap());

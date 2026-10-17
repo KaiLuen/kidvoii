@@ -7,14 +7,15 @@ KidSpeech – A fun speech learning app for toddlers aged 2–3, featuring inter
 
 ```
 src/page.html           版面模板：AppBar（Brand / 首頁 / Language）→ Content → Footer
-src/i18n.js             四種語言的所有文案（zh / en / es / ko）
+src/i18n.js             四種語言的所有文案（en / zh / es / ko，這個順序就是語言選單的順序）
 build.js                產生各語系頁面和 sitemap.xml
 assets/css/style.css    樣式（配色對齊 App 的 ProjectColors）
 assets/js/main.js       語言選單、「也有 X 語版」提示列
 assets/img/screens/     各語言的 App 截圖（600×1300 webp）
 
-index.html              ← 產生出來的，不要手改
-en/ es/ ko/index.html   ← 同上
+index.html              ← 產生出來的（英文版），不要手改
+zh/ es/ ko/index.html   ← 同上
+en/index.html           ← 同上，舊網址 /en/ 轉址到 /
 sitemap.xml             ← 同上
 ```
 
@@ -22,11 +23,12 @@ sitemap.xml             ← 同上
 
 1. 改 `src/i18n.js`（或改版面就改 `src/page.html`）
 2. 執行 `node build.js`
-3. 把產生出來的 `index.html`、`en/`、`es/`、`ko/`、`sitemap.xml` 一起 commit
+3. 把產生出來的 `index.html`、`zh/`、`es/`、`ko/`、`en/`、`sitemap.xml` 一起 commit
 
 ## SEO
 
-- 每個語系各一個網址：`/`（繁中）、`/en/`、`/es/`、`/ko/`，用 hreflang 互相標註，x-default 指向英文版
+- 每個語系各一個網址：`/`（英文）、`/zh/`、`/es/`、`/ko/`，用 hreflang 互相標註，x-default 指向英文版
+- 英文版原本在 `/en/`，2026-10 改放根目錄；`/en/` 留一個轉址頁（canonical + meta refresh）導回 `/`，搬網址要加在 `build.js` 的 `MOVED`
 - 不依瀏覽器語言自動轉址（Googlebot 用英文環境抓，自動轉址會讓中文版收錄不到），改成在頁面上方提示「也有 X 語版」
 - 主關鍵字要留在 `meta.title`、`meta.desc`、`hero.eyebrow`（頁面的 H1）和內文：
   發音練習 / 幼兒 / 兒童、pronunciation practice / toddler / kids、pronunciación / niños、발음 연습 / 유아 / 어린이
